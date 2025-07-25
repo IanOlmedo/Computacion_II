@@ -35,9 +35,14 @@ def hilo_verificador(cola_resultados, cantidad_tipos, evento_fin_generacion):
     prev_hash = blockchain[-1]["hash"] if blockchain else "0"*64
     bloque_index = len(blockchain)
 
-    while not (evento_fin_generacion.is_set() and cola_resultados.empty()):
+    while True:
         try:
             resultado = cola_resultados.get(timeout=0.5)
+
+            if resultado == "FIN":
+                print("[Verificador] Señal de finalización recibida.")
+                break  # solo si es la señal de fin
+
             ts = resultado["timestamp"]
 
             if ts not in resultados_pendientes:
@@ -46,7 +51,7 @@ def hilo_verificador(cola_resultados, cantidad_tipos, evento_fin_generacion):
             resultados_pendientes[ts][resultado["tipo"]] = resultado
 
             if len(resultados_pendientes[ts]) == cantidad_tipos:
-                # Ya tenemos los 3 tipos
+                print(f"[Verificador] Agrupados los 3 tipos para timestamp {ts}")
                 datos = resultados_pendientes.pop(ts)
 
                 alerta = (
@@ -76,6 +81,5 @@ def hilo_verificador(cola_resultados, cantidad_tipos, evento_fin_generacion):
             cola_resultados.task_done()
 
         except Exception:
-            pass  # Puede ser por timeout si la cola está vacía
+            pass  # timeout o cola vacía
 
-    print("[Verificador] Finalizado.")

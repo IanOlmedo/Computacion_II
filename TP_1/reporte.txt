@@ -1,0 +1,9 @@
+=== Reporte de Blockchain ===
+Total de bloques: 118
+Bloques con alertas: 0
+Bloques corruptos: []
+
+Promedios generales:
+ - frecuencia: 114.62
+ - presion: 144.09
+ - oxigeno: 94.53
