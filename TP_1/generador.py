@@ -7,9 +7,9 @@ from datetime import datetime
 def generar_dato():
     return {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
-        "frecuencia": random.randint(60, 180),
-        "presion": [random.randint(110, 180), random.randint(70, 110)],
-        "oxigeno": random.randint(90, 100)
+        "frecuencia": random.randint(60, 210),
+        "presion": [random.randint(110, 220), random.randint(70, 110)],
+        "oxigeno": random.randint(85, 100)
     }
 
 def hilo_generador(colas_entrada, evento_fin_generacion):
