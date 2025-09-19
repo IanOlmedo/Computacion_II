@@ -1,10 +1,9 @@
-# generador.py
-
 import time
 import random
 from datetime import datetime
 
 def generar_dato():
+    # Data biometrico
     return {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
         "frecuencia": random.randint(60, 210),
@@ -12,16 +11,15 @@ def generar_dato():
         "oxigeno": random.randint(85, 100)
     }
 
-def hilo_generador(colas_entrada, evento_fin_generacion):
-    """
-    colas_entrada: lista con 3 colas (frecuencia, presion, oxigeno)
-    """
+def proceso_generador(pipes_analizadores, evento_fin_generacion):
+   # Enviar los datos generados a los analizadores
+    print("[Generador] Iniciado.")
     for i in range(60):
         dato = generar_dato()
-        for cola in colas_entrada:
-            cola.put(dato)
+        for pipe in pipes_analizadores:
+            pipe.send(dato)
         print(f"[Generador] Dato {i+1}/60 generado y enviado: {dato}")
         time.sleep(1)
 
     evento_fin_generacion.set()
-    print("[Generador] Finalizó la generación de datos.")
+    print("[Generador] Finalizado.")

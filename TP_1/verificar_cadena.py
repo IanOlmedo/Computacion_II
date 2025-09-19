@@ -1,5 +1,3 @@
-# verificar_cadena.py
-
 import json
 import hashlib
 import os
@@ -13,7 +11,6 @@ def verificar_cadena(blockchain):
     alertas = 0
     total = len(blockchain)
 
-    # Para cálculos de promedio
     acumuladores = {
         "frecuencia": [],
         "presion": [],

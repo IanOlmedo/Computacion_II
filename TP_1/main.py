@@ -1,60 +1,72 @@
-import threading
-import queue
+# main.py
+
+from multiprocessing import Process, Pipe, Queue, Event
+from generador import proceso_generador
+from analizador import proceso_analizador
+from verificador import proceso_verificador
 import time
 
-from generador import hilo_generador
-from analizador import hilo_analizador
-from verificador import hilo_verificador
-
 def main():
-    # Una cola de salida común
-    cola_resultados = queue.Queue()
+    # Pipes para enviar datos a los analizadores
+    parent_frec, child_frec = Pipe()
+    parent_pres, child_pres = Pipe()
+    parent_oxi, child_oxi = Pipe()
 
-    # Una cola de entrada POR tipo de analizador
-    cola_frecuencia = queue.Queue()
-    cola_presion = queue.Queue()
-    cola_oxigeno = queue.Queue()
+    cola_resultados = Queue()
 
-    evento_fin_generacion = threading.Event()
+    evento_fin_generacion = Event()
 
-    # Hilo generador recibe las 3 colas
-    generador = threading.Thread(
-        target=hilo_generador,
-        args=([cola_frecuencia, cola_presion, cola_oxigeno], evento_fin_generacion),
-        name="Generador"
+    # Lanzar proceso generador
+    generador = Process(
+        target=proceso_generador,
+        args=([parent_frec, parent_pres, parent_oxi], evento_fin_generacion),
+        name="ProcesoGenerador"
     )
     generador.start()
 
-    # Analizadores (cada uno escucha su propia cola)
-    analizadores = []
-    for tipo, cola in zip(["frecuencia", "presion", "oxigeno"],
-                          [cola_frecuencia, cola_presion, cola_oxigeno]):
-        hilo = threading.Thread(
-            target=hilo_analizador,
-            args=(tipo, cola, cola_resultados, evento_fin_generacion),
-            name=f"Analizador-{tipo}"
-        )
-        hilo.start()
-        analizadores.append(hilo)
+    # Lanzar procesos analizadores
+    analizador_frec = Process(
+        target=proceso_analizador,
+        args=("frecuencia", child_frec, cola_resultados, evento_fin_generacion),
+        name="AnalizadorFrecuencia"
+    )
 
-    # Verificador (escucha resultados)
-    verificador = threading.Thread(
-        target=hilo_verificador,
+    analizador_pres = Process(
+        target=proceso_analizador,
+        args=("presion", child_pres, cola_resultados, evento_fin_generacion),
+        name="AnalizadorPresion"
+    )
+
+    analizador_oxi = Process(
+        target=proceso_analizador,
+        args=("oxigeno", child_oxi, cola_resultados, evento_fin_generacion),
+        name="AnalizadorOxigeno"
+    )
+
+    analizador_frec.start()
+    analizador_pres.start()
+    analizador_oxi.start()
+
+    # Lanzar verificador
+    verificador = Process(
+        target=proceso_verificador,
         args=(cola_resultados, 3, evento_fin_generacion),
         name="Verificador"
     )
     verificador.start()
 
-    # Esperamos a que todos los hilos terminen
+    # esperarar a que terminen los procesos
     generador.join()
-    for hilo in analizadores:
-        hilo.join()
-        cola_resultados.put("FIN")
-    
-    verificador.join()
-    
+    analizador_frec.join()
+    analizador_pres.join()
+    analizador_oxi.join()
 
-    print("Todo el procesamiento ha finalizado correctamente.")
+    # Enviar señal de fin al verificador
+    cola_resultados.put("FIN")
+
+    verificador.join()
+
+    print(">> Todos los procesos han finalizado correctamente.")
 
 if __name__ == "__main__":
     main()

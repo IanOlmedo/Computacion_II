@@ -1,12 +1,6 @@
-# verificador.py
-
 import hashlib
 import json
 import os
-import threading
-import time
-
-lock_bloqueo = threading.Lock()  # para sincronizar escritura
 
 def calcular_hash(prev_hash, datos, timestamp):
     contenido = prev_hash + json.dumps(datos, sort_keys=True) + timestamp
@@ -19,20 +13,15 @@ def cargar_blockchain():
         return json.load(f)
 
 def guardar_blockchain(blockchain):
-    with lock_bloqueo:
-        with open("blockchain.json", "w") as f:
-            json.dump(blockchain, f, indent=4)
+    with open("blockchain.json", "w") as f:
+        json.dump(blockchain, f, indent=4)
 
-def hilo_verificador(cola_resultados, cantidad_tipos, evento_fin_generacion):
-    """
-    Recibe los resultados procesados, agrupa por timestamp, valida y construye bloques.
-    """
+def proceso_verificador(cola_resultados, cantidad_tipos, evento_fin_generacion):
     print("[Verificador] Iniciado.")
 
-    resultados_pendientes = {}  # agrupados por timestamp
+    resultados_pendientes = {}
     blockchain = cargar_blockchain()
-
-    prev_hash = blockchain[-1]["hash"] if blockchain else "0"*64
+    prev_hash = blockchain[-1]["hash"] if blockchain else "0" * 64
     bloque_index = len(blockchain)
 
     while True:
@@ -41,7 +30,7 @@ def hilo_verificador(cola_resultados, cantidad_tipos, evento_fin_generacion):
 
             if resultado == "FIN":
                 print("[Verificador] Señal de finalización recibida.")
-                break  # solo si es la señal de fin
+                break
 
             ts = resultado["timestamp"]
 
@@ -78,8 +67,7 @@ def hilo_verificador(cola_resultados, cantidad_tipos, evento_fin_generacion):
                 bloque_index += 1
                 prev_hash = bloque["hash"]
 
-            cola_resultados.task_done()
-
         except Exception:
-            pass  # timeout o cola vacía
+            pass
 
+    print("[Verificador] Finalizado.")
