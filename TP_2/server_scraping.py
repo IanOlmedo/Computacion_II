@@ -5,11 +5,15 @@ import datetime as dt
 import json
 from typing import Any, Dict, Optional, Tuple, List
 
+import struct
+
 from aiohttp import web, ClientSession, ClientError
 from bs4 import BeautifulSoup
 
 # comando para instalar las librerias:
 # pip install aiohttp beautifulsoup4 lxml
+
+#nombre para el comit sobre unicamente este archivo es "Implementación del Servidor A de Scraping Asíncrono y con un servidor B s"
 
 # Funciones de scraping
 
@@ -44,21 +48,22 @@ def extract_scraping_data(html: str) -> Dict[str, Any]: #recibe el html y lo dev
     """
     # Podés usar "lxml" si lo tenés instalado, sino "html.parser"
     #lo que es lxml es un parser de html, que prmite analizar el html de manera mas eficiente
+    #comando para
 
     soup = BeautifulSoup(html, "lxml")
 
     # Título
     if soup.title and soup.title.string:
-        title = soup.title.string.strip()
+        title = soup.title.string.strip() 
     else:
         title = None
 
     # Links
     links: List[str] = []
     for a in soup.find_all("a", href=True):
-        href = a.get("href")
+        href = a.get("href") 
         if href:
-            links.append(href)
+            links.append(href) 
 
     # Imágenes
     images = soup.find_all("img")
@@ -80,7 +85,7 @@ def extract_scraping_data(html: str) -> Dict[str, Any]: #recibe el html y lo dev
             continue
 
         lname = name.lower()
-        if lname in ("description", "keywords") or lname.startswith("og:"):
+        if lname in ("description", "keywords") or lname.startswith("og:"): 
             meta_tags[name] = content
 
     return {
@@ -92,10 +97,8 @@ def extract_scraping_data(html: str) -> Dict[str, Any]: #recibe el html y lo dev
     }
 
 
-# ==============================
 # Comunicación con Servidor B
-# (por ahora, stub / simulado)
-# ==============================
+
 
 async def call_processing_server(
     url: str,
@@ -103,34 +106,46 @@ async def call_processing_server(
     processing_port: int,
 ) -> Dict[str, Any]:
     """
-    Acá más adelante vamos a implementar la comunicación real por sockets
-    con el Servidor B (multiprocessing).
+    Se conecta al Servidor B via TCP (socket) usando un protocolo simple:
+      - Enviar: 4 bytes (longitud) + JSON con {"url": ...}
+      - Recibir: 4 bytes (longitud) + JSON con los resultados
 
-    Por ahora devolvemos datos "dummy" para poder probar el Servidor A.
+    Se usa asyncio.open_connection para no bloquear el event loop.
     """
-    # TODO (Etapa 3): abrir socket TCP, enviar petición, recibir respuesta, etc.
-    # Lo dejamos así para que ya tengamos el formato correcto.
-    return {
-        "screenshot": None,  # luego será una imagen en base64
-        "performance": {
-            "load_time_ms": None,
-            "total_size_kb": None,
-            "num_requests": None,
-        },
-        "thumbnails": [],    # luego serán thumbnails en base64
-    }
+    reader, writer = await asyncio.open_connection(
+        processing_host, processing_port
+    )
 
+    try:
+        # 1) Armar payload
+        payload = {"url": url}
+        data = json.dumps(payload).encode("utf-8")
 
-# ==============================
-# Handler HTTP
-# ==============================
+        # 2) Mandar longitud + datos
+        header = struct.pack("!I", len(data))
+        writer.write(header + data)
+        await writer.drain()
+
+        # 3) Leer longitud de respuesta
+        raw_len = await reader.readexactly(4)
+        msg_len = struct.unpack("!I", raw_len)[0]
+
+        # 4) Leer el cuerpo completo
+        body = await reader.readexactly(msg_len)
+        resp_obj = json.loads(body.decode("utf-8"))
+
+        return resp_obj
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
 
 async def handle_scrape(request: web.Request) -> web.Response:
     """
     Handler principal:
       - recibe la URL
       - hace scraping asíncrono
-      - pide procesamiento extra al servidor B (simulado)
+      - pide procesamiento extra al servidor B
       - devuelve JSON consolidado
     """
     app = request.app
@@ -140,7 +155,7 @@ async def handle_scrape(request: web.Request) -> web.Response:
 
     if not url and request.method in ("POST", "PUT"):
         try:
-            data = await request.json()
+            data = await request.json() 
             url = data.get("url")
         except json.JSONDecodeError:
             url = None
@@ -159,7 +174,7 @@ async def handle_scrape(request: web.Request) -> web.Response:
     semaphore: asyncio.Semaphore = app["semaphore"]
 
     try:
-        async with semaphore:
+        async with semaphore: 
             html, resp_info = await fetch_html(url, session=session)
             scraping_data = extract_scraping_data(html)
     except RuntimeError as e:
@@ -202,9 +217,8 @@ async def handle_scrape(request: web.Request) -> web.Response:
     return web.json_response(result, status=200)
 
 
-# ==============================
 # Creación de la app y CLI
-# ==============================
+
 
 def create_app(
     workers: int,
@@ -222,10 +236,10 @@ def create_app(
     app["processing_port"] = processing_port
     app["semaphore"] = asyncio.Semaphore(workers)
 
-    async def on_startup(app: web.Application) -> None:
+    async def on_startup(app: web.Application) -> None: 
         app["http_session"] = ClientSession()
 
-    async def on_cleanup(app: web.Application) -> None:
+    async def on_cleanup(app: web.Application) -> None: 
         session: ClientSession = app["http_session"]
         await session.close()
 
@@ -245,7 +259,7 @@ def create_app(
     return app
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args() -> argparse.Namespace: 
     parser = argparse.ArgumentParser(
         description="Servidor de Scraping Web Asíncrono"
     )
@@ -296,3 +310,15 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+#para probar el servidor, correr en terminal:
+# python server_scraping.py -i 0.0.0.0 -p 8000 
+
+# o para IPv6 / dual stack en muchos SO:
+# python server_scraping.py -i :: -p 8000
+
+# Y en otra terminal ejecutar el cliente:
+# curl "http://localhost:8000/scrape?url=https://example.com" | jq
+
+
