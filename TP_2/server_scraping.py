@@ -320,5 +320,3 @@ if __name__ == "__main__":
 
 # Y en otra terminal ejecutar el cliente:
 # curl "http://localhost:8000/scrape?url=https://example.com" | jq
-
-

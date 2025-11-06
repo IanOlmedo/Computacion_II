@@ -288,3 +288,6 @@ Terminal 2: python server_scraping.py \
 
 curl -g "http://[::1]:8000/scrape?url=https://example.com" | jq            
             """
+
+
+# El nombre del commit sobre estos dos ultimos archivos es:"Implementación del Servidor B de Procesamiento Distribuido con soporte IPv4 e IPv6"
