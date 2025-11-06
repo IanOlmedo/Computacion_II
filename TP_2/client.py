@@ -82,3 +82,11 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+"""```bash
+pip install aiohttp beautifulsoup4 lxml requests pillow
+```
+
+
+"""
