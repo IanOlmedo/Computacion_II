@@ -159,3 +159,19 @@ El Servidor A:
 Espera de forma asíncrona la respuesta del Servidor B. 
 Consolida todos los datos en un único JSON. 
 Devuelve el resultado al cliente.
+
+Ejecucion de Tests
+1. Entrar al entorno virtual
+source env/bin/activate
+
+2. Instalar dependencias para el testing
+pip install pytest
+
+3. Ejecutar dentro de la carpeta TP_2 
+pytest -v
+
+## Documentación del Código
+
+El código se encuentra completamente comentado en cada módulo.
+Los comentarios explican la funcionalidad de cada bloque, el propósito de las funciones y las razones de diseño, facilitando su comprensión y mantenimiento.
+Además, los nombres de las funciones y variables fueron seleccionados para representar con claridad su comportamiento y uso dentro del sistema.

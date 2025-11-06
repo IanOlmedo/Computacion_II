@@ -10,6 +10,7 @@ from aiohttp import web, ClientSession
 
 from scraper.async_http import fetch_html
 from scraper.html_parser import extract_scraping_data
+from common.protocol import send_message_async, recv_message_async
 
 
 # Comunicación con Servidor B
@@ -20,39 +21,24 @@ async def call_processing_server(
     processing_port: int,
 ) -> Dict[str, Any]:
     """
-    Se conecta al Servidor B via TCP (socket) usando un protocolo simple:
-      - Enviar: 4 bytes (longitud) + JSON con {"url": ...}
-      - Recibir: 4 bytes (longitud) + JSON con los resultados
-
-    Se usa asyncio.open_connection para no bloquear el event loop.
+    Se conecta al Servidor B via TCP (socket) usando el protocolo común:
+      - 4 bytes de longitud + JSON serializado.
     """
     reader, writer = await asyncio.open_connection(
         processing_host, processing_port
     )
 
     try:
-        #  Armar payload
         payload = {"url": url}
-        data = json.dumps(payload).encode("utf-8")
+        # Enviar mensaje usando protocolo común
+        await send_message_async(writer, payload)
 
-        #  Mandar longitud + datos
-        header = struct.pack("!I", len(data))
-        writer.write(header + data)
-        await writer.drain()
-
-        #  Leer longitud de respuesta
-        raw_len = await reader.readexactly(4)
-        msg_len = struct.unpack("!I", raw_len)[0]
-
-        #  Leer el cuerpo completo
-        body = await reader.readexactly(msg_len)
-        resp_obj = json.loads(body.decode("utf-8"))
-
+        # Recibir respuesta
+        resp_obj = await recv_message_async(reader)
         return resp_obj
     finally:
         writer.close()
         await writer.wait_closed()
-
 
 # Handler HTTP
 
